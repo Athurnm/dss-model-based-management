@@ -10,14 +10,11 @@ from fbprophet import Prophet
 import requests
 from starlette.responses import Response
 
-# PATH
-DATAPATH = '../notebooks/'
-
 # Server
 app = FastAPI()
 
 # Read dataset
-tf = pd.read_csv('../notebooks/dss_mock_1.csv')
+tf = pd.read_csv('dss_mock_1.csv')
 tf['date_conv'] = tf['date'].apply(
     lambda x: datetime.datetime.fromtimestamp(x).strftime("%Y-%m-%d"))
 tf.drop(['date', 'is_holiday'], axis=1, inplace=True)
@@ -31,27 +28,6 @@ cols.remove('date_conv')
 
 class Date(BaseModel):
     date : str = None
-
-def convertToBahan(tf_revised, cols):
-    resp = requests.get("http://localhost:3000/API/item")
-    bahan = resp.json()
-    menu = [{}]
-    for col in cols:
-        ds = {}
-        menu.append(ds)
-    i = 0
-    for col in cols:
-        menu[i]['foodName'] = col
-        menu[i]['ingredients'] = []
-        for x in bahan:
-            if x['itemName'] == col:
-                les = []
-                for a in x['ingredients']:
-                    les = {'ingredientName':a['ingredientName'],'quantity':a['quantity']*tf_revised[col].values[0], 'metric':a['metric']}
-                    menu[i]['ingredients'].append(les)
-        i = i+1
-    menu.pop()
-    return menu
 
 
 @app.post("/predict")
@@ -69,7 +45,7 @@ async def predict(date: Date):
     # Create and return prediction
     results = []
     for col in cols:
-        model = pickle.load(open(DATAPATH+'model'+'_'+col+'.pickle', 'rb'))
+        model = pickle.load(open('model'+'_'+col+'.pickle', 'rb'))
         f_df = model.make_future_dataframe(periods=30, freq='D')
         result = model.predict(f_df)
         result_tf = result[['ds', 'yhat']].rename(columns={'yhat': col})
@@ -87,8 +63,6 @@ async def predict(date: Date):
 
     tf_revised = prediction[(prediction['date'] > today) & (prediction['date'] < twodays)
                         ].reset_index(drop=True)
-    # Convert to bahan
-    menu_bahan = convertToBahan(tf_revised, cols)
 
     tf_revised = tf_revised[['Mie Ayam','Bakso Goreng','Bakso Keju']]
     exp = tf_revised.to_dict(orient="records")

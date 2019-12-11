@@ -19,3 +19,6 @@ COPY . /home/dss-street-vendor
 COPY ./notebooks/ /notebooks
 COPY ./app /app 
 
+# Running
+CMD ["python3","-m","uvicorn","--host","0.0.0.0","--port","5000","main:app"]
+
