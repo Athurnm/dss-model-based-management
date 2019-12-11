@@ -14,7 +14,7 @@ app = Flask(__name__)
 # routes
 @app.route('/', methods=['GET'])
 def index():
-    return '''<h1>Food Demand Prediction API/h1>
+    return '''<h1>Food Demand Prediction API</h1>
 <p>Working!!!</p>'''
 
 @app.route('/predict', methods=['POST'])
@@ -29,9 +29,10 @@ def predict():
     results = []
     for col in cols:
         model = pickle.load(open('model'+'_'+col+'.pickle', 'rb'))
-        f_df = model.make_future_dataframe(periods=30, freq='D')
+        f_df = model.make_future_dataframe(periods=15, freq='D')
         result = model.predict(f_df)
         result_tf = result[['ds', 'yhat']].rename(columns={'yhat': col})
+        result_tf[col] = result_tf[col].apply(np.floor).astype(int)
         results.append(result_tf)
     prediction = pd.concat(results, axis=1)
 
@@ -40,14 +41,10 @@ def predict():
     prediction.drop_duplicates(subset='ds', keep="first", inplace=True)
     prediction = prediction.reset_index(
         drop=True).rename(columns={'ds': 'date'})
-    
-    for col in cols:
-        prediction[col] = prediction[col].apply(np.floor).astype(int)
-
     tf_revised = prediction[(prediction['date'] > today) & (prediction['date'] < twodays)
                         ].reset_index(drop=True)
 
-    tf_revised = tf_revised[['Mie Ayam','Bakso Goreng','Bakso Keju']]
+    tf_revised = tf_revised[cols]
     exp = tf_revised.to_dict(orient="records")
     
     output = []
