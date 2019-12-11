@@ -1,1 +1,1 @@
-web:  python -m uvicorn --host 0.0.0.0 --port 80  main:app  
+web:  gunicorn app:app

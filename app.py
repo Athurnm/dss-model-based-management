@@ -1,46 +1,29 @@
-# Data Handling
-from fastapi import FastAPI
-import uvicorn
+from flask import Flask, jsonify, request
 import pickle
 import numpy as np
 import pandas as pd
 import datetime
-from pydantic import BaseModel
 from fbprophet import Prophet
-import requests
-from starlette.responses import Response
 
-# Server
-app = FastAPI()
+# test num
+cols = ['Mie Ayam','Bakso Goreng','Bakso Keju']
 
-# Read dataset
-tf = pd.read_csv('dss_mock_1.csv')
-tf['date_conv'] = tf['date'].apply(
-    lambda x: datetime.datetime.fromtimestamp(x).strftime("%Y-%m-%d"))
-tf.drop(['date', 'is_holiday'], axis=1, inplace=True)
-tf['date_conv'] = pd.DatetimeIndex(tf['date_conv'])
-tf = tf.sort_values(by='date_conv').reset_index(drop=True)
+# server
+app = Flask(__name__)
 
-# list all column on dataset
-cols = list(tf.columns.values)
-cols.remove('date_conv')
+# routes
+@app.route('/', methods=['GET'])
+def index():
+    return '''<h1>Food Demand Prediction API/h1>
+<p>Working!!!</p>'''
 
-
-class Date(BaseModel):
-    date : str = None
-
-
-@app.post("/predict")
-async def predict(date: Date):
-    # getting current date and two days (should date not provided)
-    today = datetime.datetime.today().strftime("%Y-%m-%d")
-    twodays = (datetime.datetime.today() + datetime.timedelta(days=2)).strftime("%Y-%m-%d")
-
-    if date.date is not None:
-        target_date = datetime.datetime.strptime(date.date, "%Y-%m-%d")
-        today = (target_date - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-        twodays = (target_date + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-        print(today)
+@app.route('/predict', methods=['POST'])
+def predict():
+    # get date
+    date = request.get_json(force=True)['date']
+    target_date = datetime.datetime.strptime(date, "%Y-%m-%d")
+    today = (target_date - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+    twodays = (target_date + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
 
     # Create and return prediction
     results = []
@@ -66,12 +49,15 @@ async def predict(date: Date):
 
     tf_revised = tf_revised[['Mie Ayam','Bakso Goreng','Bakso Keju']]
     exp = tf_revised.to_dict(orient="records")
+    
     output = []
     for col in cols:
         les = {}
         les['itemName'] = col
         les['quantity'] = exp[0][col]
         output.append(les)
+    
+    return jsonify(output),200
 
-    return output
-
+if __name__ == '__main__':
+    app.run(port = 5000, debug=True)
