@@ -29,7 +29,7 @@ def predict():
     results = []
     for col in cols:
         model = pickle.load(open('model'+'_'+col+'.pickle', 'rb'))
-        f_df = model.make_future_dataframe(periods=15, freq='D')
+        f_df = pickle.load(open('future_'+col+'.pickle','rb'))
         result = model.predict(f_df)
         result_tf = result[['ds', 'yhat']].rename(columns={'yhat': col})
         result_tf[col] = result_tf[col].apply(np.floor).astype(int)
